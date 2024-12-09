@@ -1,62 +1,42 @@
-import redis from 'redis';
+#!/usr/bin/node
+import { createClient } from 'redis';
 import { promisify } from 'util';
 
-/**
- * Class for performing operations with Redis service
- */
 class RedisClient {
   constructor() {
-    this.client = redis.createClient();
-    this.getAsync = promisify(this.client.get).bind(this.client);
-
-    this.client.on('error', (error) => {
-      console.log(`Redis client not connected to the server: ${error.message}`);
+    this.client = createClient();
+    this.isConnected = false;
+    this.client.on('error', (err) => {
+      console.log('Redis Client Error', err.message || err.toString());
+      this.isConnected = false;
     });
 
     this.client.on('connect', () => {
-      // console.log('Redis client connected to the server');
+      this.isConnected = true;
     });
   }
 
-  /**
-   * Checks if connection to Redis is Alive
-   * @return {boolean} true if connection alive or false if not
-   */
   isAlive() {
-    return this.client.connected;
+    return this.isConnected;
   }
 
-  /**
-   * gets value corresponding to key in redis
-   * @key {string} key to search for in redis
-   * @return {string}  value of key
-   */
   async get(key) {
-    const value = await this.getAsync(key);
-    return value;
+    const Get = promisify(this.client.get).bind(this.client);
+    const val = await Get(key);
+    return val;
   }
 
-  /**
-   * Creates a new key in redis with a specific TTL
-   * @key {string} key to be saved in redis
-   * @value {string} value to be asigned to key
-   * @duration {number} TTL of key
-   * @return {undefined}  No return
-   */
   async set(key, value, duration) {
-    this.client.setex(key, duration, value);
+    const Set = promisify(this.client.set).bind(this.client);
+    await Set(key, value);
+    await this.client.expire(key, duration);
   }
 
-  /**
-   * Deletes key in redis service
-   * @key {string} key to be deleted
-   * @return {undefined}  No return
-   */
   async del(key) {
-    this.client.del(key);
+    const Del = promisify(this.client.del).bind(this.client);
+    await Del(key);
   }
 }
 
-const redisClient = new RedisClient();
-
+export const redisClient = new RedisClient();
 export default redisClient;

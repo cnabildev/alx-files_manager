@@ -1,12 +1,13 @@
+#!/usr/bin/node
 import express from 'express';
-import controllerRouting from './routes/index';
+import injectRoutes from './routes';
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(express.json());
+injectRoutes(app);
 
-controllerRouting(app);
+app.use(express.json({ limit: '200mb' }));
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
